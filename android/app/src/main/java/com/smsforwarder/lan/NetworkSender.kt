@@ -35,7 +35,7 @@ object NetworkSender {
                     return@launch
                 }
                 val ok = doSend(context, Settings(context), sender, body, isCode)
-                dao.markSent(id, if (ok) "ok" else "fail")
+                if (ok) dao.markSent(id, "ok") else dao.markFailed(id, "fail")
                 context.getSharedPreferences("sms_diagnostics", Context.MODE_PRIVATE).edit()
                     .putString("last_send_result", if (ok) "Сервер принял SMS" else "Ошибка POST; SMS осталось в очереди").apply()
             } catch (e: Exception) {
