@@ -101,7 +101,7 @@ object NetworkSender {
      * который доверяет этому сертификату + системным CA.
      * Если файла нет — используется системное доверие.
      */
-    private fun applyCustomTrust(context: Context, conn: HttpsURLConnection) {
+    fun applyCustomTrust(context: Context, conn: HttpsURLConnection) {
         try {
             val cf = CertificateFactory.getInstance("X.509")
             context.assets.open("cert.pem").use { certInput ->
