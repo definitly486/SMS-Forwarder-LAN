@@ -1,0 +1,9 @@
+{
+  "host": "0.0.0.0",
+  "http_port": 8080,
+  "https_port": 8443,
+  "token": "смени_этот_токен_на_длинный_случайный_минимум_32_символа",
+  "cert_file": "cert.pem",
+  "key_file": "key.pem",
+  "db_path": "sms.db"
+}

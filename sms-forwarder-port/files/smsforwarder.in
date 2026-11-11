@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# PROVIDE: smsforwarder
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="smsforwarder"
+rcvar="${name}_enable"
+
+load_rc_config $name
+
+: ${smsforwarder_enable:="NO"}
+: ${smsforwarder_user:="www"}
+: ${smsforwarder_group:="www"}
+: ${smsforwarder_dir:="/usr/local/sms-forwarder"}
+: ${smsforwarder_python:="/usr/local/bin/python3.11"}
+
+pidfile="/var/run/${name}.pid"
+command="/usr/sbin/daemon"
+command_args="-f -p ${pidfile} -u ${smsforwarder_user} ${smsforwarder_python} ${smsforwarder_dir}/server.py"
+
+start_precmd="smsforwarder_prestart"
+
+smsforwarder_prestart()
+{
+    if [ ! -d "${smsforwarder_dir}" ]; then
+        echo "Directory ${smsforwarder_dir} does not exist"
+        return 1
+    fi
+    if [ ! -f "${smsforwarder_dir}/server.py" ]; then
+        echo "server.py not found"
+        return 1
+    fi
+    install -o ${smsforwarder_user} -g ${smsforwarder_group} -m 644 /dev/null ${pidfile} 2>/dev/null || true
+}
+
+run_rc_command "$1"
