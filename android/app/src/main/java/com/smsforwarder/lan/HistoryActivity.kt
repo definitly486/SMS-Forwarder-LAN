@@ -5,6 +5,8 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.smsforwarder.lan.db.AppDatabase
@@ -23,12 +25,24 @@ class HistoryActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         title = "История SMS"
 
+        val basePadding = (24 * resources.displayMetrics.density).toInt()
         val recycler = RecyclerView(this).apply {
             layoutManager = LinearLayoutManager(this@HistoryActivity)
-            setPadding(24, 24, 24, 24)
+            setPadding(basePadding, basePadding, basePadding, basePadding)
             clipToPadding = false
         }
+        ViewCompat.setOnApplyWindowInsetsListener(recycler) { view, windowInsets ->
+            val bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(
+                basePadding + bars.left,
+                basePadding + bars.top,
+                basePadding + bars.right,
+                basePadding + bars.bottom
+            )
+            windowInsets
+        }
         setContentView(recycler)
+        ViewCompat.requestApplyInsets(recycler)
 
         adapter = MessageAdapter()
         recycler.adapter = adapter
