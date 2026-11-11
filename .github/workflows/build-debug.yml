@@ -7,6 +7,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Debug APK
@@ -15,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -25,30 +30,16 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: ''          # не ставим устаревший 'tools'
+          packages: ''
 
       - name: Accept licenses & install required packages
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-
-          # Создаём файлы лицензий вручную (на случай проблем)
-          mkdir -p $ANDROID_SDK_ROOT/licenses
-          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
-          echo -e "\nd56f5187479451eabf01fb78a37bad631f665599" > $ANDROID_SDK_ROOT/licenses/android-sdk-arm-dbt-license || true
-
-          # Ставим только то, что нужно для сборки
+          mkdir -p "$ANDROID_SDK_ROOT/licenses"
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > "$ANDROID_SDK_ROOT/licenses/android-sdk-license"
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_SDK_ROOT/licenses/android-sdk-preview-license"
+          echo -e "\nd56f5187479451eabf01fb78a37bad631f665599" > "$ANDROID_SDK_ROOT/licenses/android-sdk-arm-dbt-license" || true
           sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-      - name: Accept Android licenses
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          # На всякий случай ещё раз через yes
-          mkdir -p $ANDROID_SDK_ROOT/licenses
-          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
-          echo -e "\nd56f5187479451eabf01fb78a37bad631f665599" > $ANDROID_SDK_ROOT/licenses/android-sdk-arm-dbt-license
-          echo -e "\n33b6a2b64607f11b759f320ef9dff4ee9e2b068" > $ANDROID_SDK_ROOT/licenses/google-gdk-license || true
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -77,7 +68,7 @@ jobs:
             find android -name "*.apk" || true
             exit 1
           fi
-          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "apk_path=$APK_PATH" >> "$GITHUB_OUTPUT"
           echo "Found APK: $APK_PATH"
           ls -lh "$APK_PATH"
 
@@ -88,8 +79,41 @@ jobs:
           path: ${{ steps.find_apk.outputs.apk_path }}
           retention-days: 30
 
-      - name: Create Release & Upload APK
-        if: startsWith(github.ref, 'refs/tags/')
+      # Every push to main/master updates one stable, easy-to-find Release.
+      - name: Move debug-latest tag to this commit
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: |
+          git tag -f debug-latest "$GITHUB_SHA"
+          git push origin refs/tags/debug-latest --force
+
+      - name: Publish latest Debug APK
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: debug-latest
+          target_commitish: ${{ github.sha }}
+          files: ${{ steps.find_apk.outputs.apk_path }}
+          name: SMS Forwarder LAN — Debug latest
+          body: |
+            ## Последняя Debug-сборка
+
+            Этот релиз автоматически обновляется после каждого успешного push в main/master.
+
+            - Commit: ${{ github.sha }}
+            - Ветка: ${{ github.ref_name }}
+
+            ### Установка
+            Скачайте APK из раздела Assets и установите на Android.
+          draft: false
+          prerelease: true
+          make_latest: false
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Version tags v* continue to create their own separate Releases.
+      - name: Create versioned Release & Upload APK
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.find_apk.outputs.apk_path }}
@@ -97,14 +121,13 @@ jobs:
           body: |
             ## Debug-сборка
 
-            - Версия: `${{ github.ref_name }}`
+            - Версия: ${{ github.ref_name }}
             - Commit: ${{ github.sha }}
 
             ### Установка
-            1. Скачай APK
-            2. Разреши установку из неизвестных источников
-            3. Установи и выдай разрешения SMS + уведомления
+            Скачайте APK из раздела Assets и установите на Android.
           draft: false
           prerelease: true
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
