@@ -96,9 +96,9 @@ def index():
         </table>
         <script>
             const tokenInput = document.getElementById('token');
-            tokenInput.value = sessionStorage.getItem('sms_forwarder_token') || '';
+            tokenInput.value = localStorage.getItem('sms_forwarder_token') || '';
             tokenInput.addEventListener('input', () => {
-                sessionStorage.setItem('sms_forwarder_token', tokenInput.value.trim());
+                localStorage.setItem('sms_forwarder_token', tokenInput.value.trim());
             });
 
             async function load() {
