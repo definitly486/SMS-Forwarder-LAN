@@ -32,11 +32,18 @@ class MainActivity : AppCompatActivity() {
 
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(48, 48, 48, 48)
+            setPadding(48, 32, 48, 48)
         }
+        layout.addView(TextView(this).apply {
+            text = "SMS FORWARDER LAN — УПРАВЛЕНИЕ"
+            textSize = 20f
+            setPadding(0, 0, 0, 20)
+        })
 
         val switchEnabled = Switch(this).apply {
-            text = "Пересылка включена"
+            text = "ПЕРЕСЫЛКА ВКЛЮЧЕНА"
+            textSize = 18f
+            setPadding(0, 12, 0, 20)
             isChecked = settings.enabled
             setOnCheckedChangeListener { _, checked ->
                 settings.enabled = checked
@@ -165,6 +172,25 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        val diagnosticsText = TextView(this).apply { textSize = 14f; setPadding(0, 16, 0, 12) }
+        fun refreshDiagnostics() {
+            val p = getSharedPreferences("sms_diagnostics", MODE_PRIVATE)
+            val count = p.getInt("broadcast_count", 0)
+            val at = p.getLong("last_broadcast_at", 0L)
+            val time = if (at == 0L) "никогда" else java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(at))
+            val receive = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
+            val read = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
+            diagnosticsText.text = "ДИАГНОСТИКА SMS\\nПересылка: ${if (settings.enabled) "ВКЛ" else "ВЫКЛ"}\\nРежим: ${if (settings.mode == 1) "все SMS" else "только коды"}\\nRECEIVE_SMS: ${if (receive) "разрешено" else "НЕТ РАЗРЕШЕНИЯ"}\\nREAD_SMS: ${if (read) "разрешено" else "НЕТ РАЗРЕШЕНИЯ"}\\nSMS_RECEIVED принято: $count\\nПоследнее событие: $time\\nЧто произошло: ${p.getString("last_event", "пока событий нет")}\\nОтправка: ${p.getString("last_send_result", "ещё не выполнялась")}"
+        }
+        val refreshDiagnosticsButton = Button(this).apply {
+            text = "Обновить диагностику SMS"
+            setOnClickListener { refreshDiagnostics() }
+        }
+        val requestPermissionsButton = Button(this).apply {
+            text = "Запросить разрешения SMS"
+            setOnClickListener { requestPermissions(); refreshDiagnostics() }
+        }
+
         val historyBtn = Button(this).apply {
             text = "История сообщений"
             setOnClickListener {
@@ -186,7 +212,12 @@ class MainActivity : AppCompatActivity() {
         layout.addView(saveBtn)
         layout.addView(testBtn)
         layout.addView(testResult)
+        layout.addView(TextView(this).apply { text = "\\nДИАГНОСТИКА ПРИЁМА SMS"; textSize = 16f })
+        layout.addView(diagnosticsText)
+        layout.addView(refreshDiagnosticsButton)
+        layout.addView(requestPermissionsButton)
         layout.addView(historyBtn)
+        refreshDiagnostics()
 
         setContentView(ScrollView(this).apply { addView(layout) })
 
