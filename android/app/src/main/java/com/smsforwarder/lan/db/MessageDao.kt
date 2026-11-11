@@ -19,6 +19,9 @@ interface MessageDao {
     @Query("UPDATE messages SET sentToServer = 1, serverResponse = :resp WHERE id = :id")
     suspend fun markSent(id: Long, resp: String?)
 
+    @Query("UPDATE messages SET serverResponse = :resp WHERE id = :id")
+    suspend fun markFailed(id: Long, resp: String?)
+
     @Query("DELETE FROM messages WHERE receivedAt < :before")
     suspend fun deleteOlderThan(before: Long)
 
