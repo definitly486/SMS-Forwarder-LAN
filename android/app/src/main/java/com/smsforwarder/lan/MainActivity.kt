@@ -10,12 +10,16 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
+import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import javax.net.ssl.HttpsURLConnection
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : AppCompatActivity() {
 
@@ -86,24 +90,77 @@ class MainActivity : AppCompatActivity() {
             hint = "Токен авторизации"
         }
 
+        val saveSettings = {
+            settings.host = hostEdit.text.toString().trim()
+            settings.port = portEdit.text.toString().toIntOrNull() ?: 8443
+            settings.token = tokenEdit.text.toString().trim()
+        }
+
         val saveBtn = Button(this).apply {
             text = "Сохранить"
             setOnClickListener {
-                settings.host = hostEdit.text.toString().trim()
-                settings.port = portEdit.text.toString().toIntOrNull() ?: 8443
-                settings.token = tokenEdit.text.toString().trim()
+                saveSettings()
                 Toast.makeText(this@MainActivity, "Сохранено", Toast.LENGTH_SHORT).show()
             }
+        }
+
+        val testResult = TextView(this).apply {
+            text = "Проверка соединения ещё не выполнялась"
+            textSize = 14f
+            setPadding(0, 20, 0, 20)
         }
 
         val testBtn = Button(this).apply {
             text = "Проверить соединение"
             setOnClickListener {
-                Toast.makeText(
-                    this@MainActivity,
-                    "URL: ${settings.baseUrl()}",
-                    Toast.LENGTH_SHORT
-                ).show()
+                saveSettings()
+                val testUrl = "${settings.baseUrl()}/api/messages?limit=1"
+                isEnabled = false
+                text = "Проверка..."
+                testResult.text = "⏳ Подключение к серверу...\nАдрес: $testUrl"
+
+                Thread {
+                    val startedAt = System.currentTimeMillis()
+                    var connection: HttpURLConnection? = null
+                    val result = try {
+                        val url = URL(testUrl)
+                        connection = url.openConnection() as HttpURLConnection
+                        if (connection is HttpsURLConnection && settings.connectionType == 0) {
+                            NetworkSender.applyCustomTrust(this@MainActivity, connection)
+                        }
+                        connection.requestMethod = "GET"
+                        connection.setRequestProperty("Authorization", "Bearer ${settings.token}")
+                        connection.connectTimeout = 8000
+                        connection.readTimeout = 8000
+                        val code = connection.responseCode
+                        val elapsed = System.currentTimeMillis() - startedAt
+                        when (code) {
+                            in 200..299 -> "✓ Соединение успешно\nСервер доступен, токен принят.\nHTTP: $code\nВремя ответа: ${elapsed} мс"
+                            401, 403 -> "✗ Сервер доступен, но авторизация не пройдена.\nHTTP: $code\nПроверьте токен."
+                            404 -> "✗ Сервер доступен, но адрес API не найден.\nHTTP: $code"
+                            else -> {
+                                val stream = if (code >= 400) connection.errorStream else connection.inputStream
+                                val details = stream?.bufferedReader()?.use { it.readText() }?.take(500).orEmpty()
+                                "✗ Сервер ответил ошибкой.\nHTTP: $code\nОтвет: $details"
+                            }
+                        }
+                    } catch (e: javax.net.ssl.SSLException) {
+                        "✗ Ошибка SSL-сертификата: ${e.localizedMessage ?: e.javaClass.simpleName}"
+                    } catch (e: java.net.SocketTimeoutException) {
+                        "✗ Превышено время ожидания. Сервер не ответил за 8 секунд."
+                    } catch (e: java.net.UnknownHostException) {
+                        "✗ Не удалось найти сервер. Проверьте адрес."
+                    } catch (e: Exception) {
+                        "✗ Ошибка соединения: ${e.localizedMessage ?: e.javaClass.simpleName}"
+                    } finally {
+                        connection?.disconnect()
+                    }
+                    runOnUiThread {
+                        testResult.text = result
+                        isEnabled = true
+                        text = "Проверить соединение"
+                    }
+                }.start()
             }
         }
 
@@ -127,11 +184,11 @@ class MainActivity : AppCompatActivity() {
         layout.addView(tokenEdit)
         layout.addView(saveBtn)
         layout.addView(testBtn)
+        layout.addView(testResult)
         layout.addView(historyBtn)
 
-        setContentView(layout)
+        setContentView(ScrollView(this).apply { addView(layout) })
 
-        // Если уже включено — поднимаем службу
         if (settings.enabled) {
             startForegroundService(Intent(this, SmsService::class.java))
         }
