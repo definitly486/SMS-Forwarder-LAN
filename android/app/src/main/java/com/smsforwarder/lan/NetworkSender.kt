@@ -22,24 +22,32 @@ object NetworkSender {
     private const val TAG = "NetworkSender"
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    fun send(context: Context, sender: String, body: String, isCode: Boolean) {
+    fun handleIncoming(context: Context, sender: String, body: String, isCode: Boolean, shouldForward: Boolean) {
         scope.launch {
-            val dao = AppDatabase.get(context).messageDao()
-            val entity = MessageEntity(
-                sender = sender,
-                body = body,
-                receivedAt = System.currentTimeMillis(),
-                isCode = isCode,
-                sentToServer = false
-            )
-            val id = dao.insert(entity)
-
-            val settings = Settings(context)
-            if (!settings.enabled) return@launch
-
-            val ok = doSend(context, settings, sender, body, isCode)
-            dao.markSent(id, if (ok) "ok" else "fail")
+            try {
+                val dao = AppDatabase.get(context).messageDao()
+                val id = dao.insert(MessageEntity(sender = sender, body = body, receivedAt = System.currentTimeMillis(), isCode = isCode, sentToServer = false))
+                if (!shouldForward) {
+                    val reason = if (!Settings(context).enabled) "not_forwarding_disabled" else "filtered_by_mode"
+                    dao.markSent(id, reason)
+                    context.getSharedPreferences("sms_diagnostics", Context.MODE_PRIVATE).edit()
+                        .putString("last_send_result", "SMS сохранено локально; пересылка пропущена: $reason").apply()
+                    return@launch
+                }
+                val ok = doSend(context, Settings(context), sender, body, isCode)
+                dao.markSent(id, if (ok) "ok" else "fail")
+                context.getSharedPreferences("sms_diagnostics", Context.MODE_PRIVATE).edit()
+                    .putString("last_send_result", if (ok) "Сервер принял SMS" else "Ошибка POST; SMS осталось в очереди").apply()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to save incoming SMS", e)
+                context.getSharedPreferences("sms_diagnostics", Context.MODE_PRIVATE).edit()
+                    .putString("last_send_result", "Ошибка сохранения: ${e.javaClass.simpleName}: ${e.localizedMessage}").apply()
+            }
         }
+    }
+
+    fun send(context: Context, sender: String, body: String, isCode: Boolean) {
+        handleIncoming(context, sender, body, isCode, Settings(context).enabled)
     }
 
     fun flushQueue(context: Context) {
@@ -88,6 +96,8 @@ object NetworkSender {
             OutputStreamWriter(conn.outputStream).use { it.write(payload) }
 
             val code = conn.responseCode
+            val response = if (code >= 400) conn.errorStream?.bufferedReader()?.use { it.readText() } else conn.inputStream?.bufferedReader()?.use { it.readText() }
+            Log.i(TAG, "SMS POST HTTP $code; response=${response?.take(300)}")
             conn.disconnect()
             code in 200..299
         } catch (e: Exception) {
