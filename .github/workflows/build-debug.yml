@@ -25,6 +25,16 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Accept Android licenses
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          # На всякий случай ещё раз через yes
+          mkdir -p $ANDROID_SDK_ROOT/licenses
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
+          echo -e "\nd56f5187479451eabf01fb78a37bad631f665599" > $ANDROID_SDK_ROOT/licenses/android-sdk-arm-dbt-license
+          echo -e "\n33b6a2b64607f11b759f320ef9dff4ee9e2b068" > $ANDROID_SDK_ROOT/licenses/google-gdk-license || true
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -47,6 +57,11 @@ jobs:
         id: find_apk
         run: |
           APK_PATH=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "APK not found!"
+            find android -name "*.apk" || true
+            exit 1
+          fi
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
           echo "Found APK: $APK_PATH"
           ls -lh "$APK_PATH"
