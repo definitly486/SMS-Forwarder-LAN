@@ -95,8 +95,14 @@ def index():
             <tbody id="list"></tbody>
         </table>
         <script>
+            const tokenInput = document.getElementById('token');
+            tokenInput.value = sessionStorage.getItem('sms_forwarder_token') || '';
+            tokenInput.addEventListener('input', () => {
+                sessionStorage.setItem('sms_forwarder_token', tokenInput.value.trim());
+            });
+
             async function load() {
-                const token = document.getElementById('token').value;
+                const token = tokenInput.value.trim();
                 const q = document.getElementById('search').value;
                 const status = document.getElementById('status');
                 status.textContent = 'загрузка...';
@@ -105,7 +111,11 @@ def index():
                         headers: { 'Authorization': 'Bearer ' + token }
                     });
                     if (!r.ok) {
-                        status.textContent = 'ошибка ' + r.status;
+                        if (r.status === 401) {
+                            status.textContent = '401: введите тот же токен, что указан в config.json на сервере и в Android';
+                        } else {
+                            status.textContent = 'ошибка ' + r.status;
+                        }
                         return;
                     }
                     const data = await r.json();
@@ -130,6 +140,7 @@ def index():
             document.getElementById('search').addEventListener('keydown', e => {
                 if (e.key === 'Enter') load();
             });
+            if (tokenInput.value) load();
         </script>
     </body>
     </html>
