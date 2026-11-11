@@ -1,12 +1,14 @@
 package com.smsforwarder.lan
 
 import android.os.Bundle
+import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.smsforwarder.lan.db.AppDatabase
@@ -23,26 +25,51 @@ class HistoryActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "История SMS"
+        supportActionBar?.hide()
 
-        val basePadding = (24 * resources.displayMetrics.density).toInt()
+        val density = resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).toInt()
+
+        val header = TextView(this).apply {
+            text = "История SMS"
+            textSize = 20f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(0xFF202124.toInt())
+            setPadding(dp(20), dp(16), dp(20), dp(16))
+            setBackgroundColor(0xFFF5F5F5.toInt())
+        }
+
         val recycler = RecyclerView(this).apply {
             layoutManager = LinearLayoutManager(this@HistoryActivity)
-            setPadding(basePadding, basePadding, basePadding, basePadding)
+            setPadding(dp(16), dp(8), dp(16), dp(16))
             clipToPadding = false
+            setBackgroundColor(0xFFFFFFFF.toInt())
         }
-        ViewCompat.setOnApplyWindowInsetsListener(recycler) { view, windowInsets ->
+
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(0xFFFFFFFF.toInt())
+            addView(header, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+            addView(recycler, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            ))
+        }
+
+        // Apply system-bar insets to the whole screen exactly once.
+        // The title and message list are laid out below the status bar.
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, windowInsets ->
             val bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(
-                basePadding + bars.left,
-                basePadding + bars.top,
-                basePadding + bars.right,
-                basePadding + bars.bottom
-            )
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
             windowInsets
         }
-        setContentView(recycler)
-        ViewCompat.requestApplyInsets(recycler)
+
+        setContentView(root)
+        ViewCompat.requestApplyInsets(root)
 
         adapter = MessageAdapter()
         recycler.adapter = adapter
