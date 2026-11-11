@@ -17,6 +17,8 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import javax.net.ssl.HttpsURLConnection
 import java.net.HttpURLConnection
 import java.net.URL
@@ -219,7 +221,17 @@ class MainActivity : AppCompatActivity() {
         layout.addView(historyBtn)
         refreshDiagnostics()
 
-        setContentView(ScrollView(this).apply { addView(layout) })
+        val rootScroll = ScrollView(this).apply {
+            clipToPadding = false
+            addView(layout)
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(rootScroll) { view, windowInsets ->
+            val bars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            windowInsets
+        }
+        setContentView(rootScroll)
+        ViewCompat.requestApplyInsets(rootScroll)
 
         if (settings.enabled) {
             startForegroundService(Intent(this, SmsService::class.java))
