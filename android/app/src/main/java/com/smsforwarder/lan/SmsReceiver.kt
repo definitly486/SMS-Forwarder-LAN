@@ -30,7 +30,8 @@ class SmsReceiver : BroadcastReceiver() {
             val isCode = codePattern.matcher(body).find()
             val settings = Settings(context)
             val forward = settings.enabled && (settings.mode == 1 || isCode)
-            NetworkSender.handleIncoming(context, sender, body, isCode, forward)
+            val pendingResult = goAsync()
+            NetworkSender.handleIncoming(context, sender, body, isCode, forward) { pendingResult.finish() }
             prefs.edit().putString("last_event", "SMS принято; отправитель=$sender; код=$isCode; пересылка=$forward").apply()
             Log.i("SmsReceiver", "SMS received; code=$isCode; forward=$forward")
         } catch (e: Exception) {
