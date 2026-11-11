@@ -180,7 +180,7 @@ class MainActivity : AppCompatActivity() {
             val time = if (at == 0L) "никогда" else java.text.SimpleDateFormat("dd.MM.yyyy HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date(at))
             val receive = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
             val read = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) == PackageManager.PERMISSION_GRANTED
-            diagnosticsText.text = "ДИАГНОСТИКА SMS\\nПересылка: ${if (settings.enabled) "ВКЛ" else "ВЫКЛ"}\\nРежим: ${if (settings.mode == 1) "все SMS" else "только коды"}\\nRECEIVE_SMS: ${if (receive) "разрешено" else "НЕТ РАЗРЕШЕНИЯ"}\\nREAD_SMS: ${if (read) "разрешено" else "НЕТ РАЗРЕШЕНИЯ"}\\nSMS_RECEIVED принято: $count\\nПоследнее событие: $time\\nЧто произошло: ${p.getString("last_event", "пока событий нет")}\\nОтправка: ${p.getString("last_send_result", "ещё не выполнялась")}"
+            diagnosticsText.text = "ДИАГНОСТИКА SMS\nПересылка: ${if (settings.enabled) "ВКЛ" else "ВЫКЛ"}\nРежим: ${if (settings.mode == 1) "все SMS" else "только коды"}\nRECEIVE_SMS: ${if (receive) "разрешено" else "НЕТ РАЗРЕШЕНИЯ"}\nREAD_SMS: ${if (read) "разрешено" else "НЕТ РАЗРЕШЕНИЯ"}\nSMS_RECEIVED принято: $count\nПоследнее событие: $time\nЧто произошло: ${p.getString("last_event", "пока событий нет")}\nОтправка: ${p.getString("last_send_result", "ещё не выполнялась")}"
         }
         val refreshDiagnosticsButton = Button(this).apply {
             text = "Обновить диагностику SMS"
@@ -212,7 +212,7 @@ class MainActivity : AppCompatActivity() {
         layout.addView(saveBtn)
         layout.addView(testBtn)
         layout.addView(testResult)
-        layout.addView(TextView(this).apply { text = "\\nДИАГНОСТИКА ПРИЁМА SMS"; textSize = 16f })
+        layout.addView(TextView(this).apply { text = "\nДИАГНОСТИКА ПРИЁМА SMS"; textSize = 16f })
         layout.addView(diagnosticsText)
         layout.addView(refreshDiagnosticsButton)
         layout.addView(requestPermissionsButton)
