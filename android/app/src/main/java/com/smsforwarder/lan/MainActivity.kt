@@ -110,13 +110,14 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, 20, 0, 20)
         }
 
-        val testBtn = Button(this).apply {
+        lateinit var testBtn: Button
+        testBtn = Button(this).apply {
             text = "Проверить соединение"
             setOnClickListener {
                 saveSettings()
                 val testUrl = "${settings.baseUrl()}/api/messages?limit=1"
-                isEnabled = false
-                text = "Проверка..."
+                testBtn.isEnabled = false
+                testBtn.text = "Проверка..."
                 testResult.text = "⏳ Подключение к серверу...\nАдрес: $testUrl"
 
                 Thread {
@@ -157,8 +158,8 @@ class MainActivity : AppCompatActivity() {
                     }
                     runOnUiThread {
                         testResult.text = result
-                        isEnabled = true
-                        text = "Проверить соединение"
+                        testBtn.isEnabled = true
+                        testBtn.text = "Проверить соединение"
                     }
                 }.start()
             }
