@@ -22,7 +22,7 @@ object NetworkSender {
     private const val TAG = "NetworkSender"
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    fun handleIncoming(context: Context, sender: String, body: String, isCode: Boolean, shouldForward: Boolean) {
+    fun handleIncoming(context: Context, sender: String, body: String, isCode: Boolean, shouldForward: Boolean, onComplete: (() -> Unit)? = null) {
         scope.launch {
             try {
                 val dao = AppDatabase.get(context).messageDao()
@@ -42,6 +42,8 @@ object NetworkSender {
                 Log.e(TAG, "Failed to save incoming SMS", e)
                 context.getSharedPreferences("sms_diagnostics", Context.MODE_PRIVATE).edit()
                     .putString("last_send_result", "Ошибка сохранения: ${e.javaClass.simpleName}: ${e.localizedMessage}").apply()
+            } finally {
+                onComplete?.invoke()
             }
         }
     }
