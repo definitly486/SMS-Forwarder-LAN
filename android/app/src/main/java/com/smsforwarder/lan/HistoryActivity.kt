@@ -61,7 +61,12 @@ class HistoryActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: VH, position: Int) {
             val m = items[position]
-            val status = if (m.sentToServer) "✓ отправлено" else "⏳ в очереди"
+            val status = when (m.serverResponse) {
+                "filtered_by_mode" -> "↳ сохранено локально (фильтр кодов)"
+                "not_forwarding_disabled" -> "↳ сохранено локально (пересылка выключена)"
+                "fail" -> "⚠ ошибка отправки, будет повтор"
+                else -> if (m.sentToServer) "✓ отправлено" else "⏳ в очереди"
+            }
             val codeMark = if (m.isCode) " [КОД]" else ""
             holder.text.text = buildString {
                 append(sdf.format(Date(m.receivedAt)))
