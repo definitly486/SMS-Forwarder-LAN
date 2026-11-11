@@ -1,4 +1,6 @@
-sms-forwarder/server.py
+
+etc/rc.d/smsforwarder
+sms-forwarder/config.json
 sms-forwarder/database.py
-sms-forwarder/config.json.sample
 sms-forwarder/requirements.txt
+sms-forwarder/server.py

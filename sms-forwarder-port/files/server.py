@@ -4,6 +4,9 @@ SMS Forwarder LAN — сервер для приёма SMS с Android.
 HTTP (8080) + HTTPS (8443) + простой веб-интерфейс.
 """
 
+
+import sys
+import os
 import json
 import ssl
 import threading
@@ -149,18 +152,48 @@ def index():
 
 
 if __name__ == "__main__":
-    def run_http():
-        app.run(host=cfg["host"], port=cfg["http_port"], debug=False, use_reloader=False)
+    import os
 
-    t = threading.Thread(target=run_http, daemon=True)
-    t.start()
-    print(f"HTTP  listening on {cfg['host']}:{cfg['http_port']}")
-
+    # Логи в файл, чтобы видеть ошибки под daemon
+    log_path = os.path.join(os.path.dirname(__file__) or ".", "server.log")
     try:
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        context.load_cert_chain(cfg["cert_file"], cfg["key_file"])
-        print(f"HTTPS listening on {cfg['host']}:{cfg['https_port']}")
-        app.run(host=cfg["host"], port=cfg["https_port"], ssl_context=context, debug=False, use_reloader=False)
-    except FileNotFoundError:
-        print("cert.pem / key.pem не найдены — HTTPS отключён")
-        t.join()
+        log_f = open(log_path, "a", buffering=1)
+        sys.stdout = log_f
+        sys.stderr = log_f
+    except Exception:
+        pass
+
+    import sys
+    from datetime import datetime
+    print(f"\n=== start {datetime.utcnow().isoformat()}Z ===", flush=True)
+
+    cert = cfg.get("cert_file", "cert.pem")
+    key = cfg.get("key_file", "key.pem")
+
+    # HTTPS, если есть сертификаты
+    if os.path.isfile(cert) and os.path.isfile(key):
+        try:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(cert, key)
+            print(f"HTTPS on {cfg['host']}:{cfg['https_port']}", flush=True)
+            app.run(
+                host=cfg["host"],
+                port=cfg["https_port"],
+                ssl_context=context,
+                debug=False,
+                use_reloader=False,
+                threaded=True,
+            )
+            sys.exit(0)
+        except Exception as e:
+            print(f"HTTPS failed: {e}", flush=True)
+
+    # HTTP (основной режим без сертификатов)
+    print(f"HTTP on {cfg['host']}:{cfg['http_port']}", flush=True)
+    app.run(
+        host=cfg["host"],
+        port=cfg["http_port"],
+        debug=False,
+        use_reloader=False,
+        threaded=True,
+    )

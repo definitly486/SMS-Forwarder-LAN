@@ -1,8 +1,8 @@
 PORTNAME=		sms-forwarder
-PORTVERSION=	1.0.0
+PORTVERSION=	        1.0.0
 CATEGORIES=		net
-MASTER_SITES=	# empty
-DISTFILES=		# empty
+MASTER_SITES=	        https://github.com/definitly486/SMS-Forwarder-LAN/archive/refs/heads/
+DISTFILES=		main.zip
 
 MAINTAINER=		you@example.com
 COMMENT=		SMS Forwarder LAN server for FreeBSD
@@ -23,7 +23,7 @@ do-install:
 	${MKDIR} ${STAGEDIR}${PREFIX}/sms-forwarder
 	${INSTALL_DATA} ${FILESDIR}/server.py ${STAGEDIR}${PREFIX}/sms-forwarder/
 	${INSTALL_DATA} ${FILESDIR}/database.py ${STAGEDIR}${PREFIX}/sms-forwarder/
-	${INSTALL_DATA} ${FILESDIR}/config.json.sample ${STAGEDIR}${PREFIX}/sms-forwarder/
+	${INSTALL_DATA} ${FILESDIR}/config.json ${STAGEDIR}${PREFIX}/sms-forwarder/
 	${INSTALL_DATA} ${FILESDIR}/requirements.txt ${STAGEDIR}${PREFIX}/sms-forwarder/
 
 .include <bsd.port.mk>
